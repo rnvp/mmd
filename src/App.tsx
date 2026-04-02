@@ -539,17 +539,17 @@ export default function App() {
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-[var(--app-overlay)] px-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-[26px] border border-[var(--app-border-strong)] bg-[var(--app-modal-bg)] p-5 shadow-[var(--app-modal-shadow)]">
             <p className="text-[11px] uppercase tracking-[0.24em] text-[var(--app-muted)]">Unsaved Changes</p>
-            <h2 className="mt-2 text-xl font-semibold text-[var(--app-text-strong)]">当前文档还没有保存</h2>
+            <h2 className="mt-2 text-xl font-semibold text-[var(--app-text-strong)]">This document has unsaved changes</h2>
             <p className="mt-3 text-sm leading-6 text-[var(--app-muted-soft)]">
-              你正在执行
+              You are about to
               {pendingAction === 'new'
-                ? '新建文档'
+                ? ' create a new document'
                 : pendingAction === 'open'
-                  ? '打开其他文件'
+                  ? ' open another file'
                   : pendingAction === 'openDrop'
-                    ? '拖拽打开文件'
-                    : '关闭窗口'}
-              。请选择先保存，或直接丢弃当前修改。
+                    ? ' open a dropped file'
+                    : ' close the window'}
+              . Save first, or discard the current changes.
             </p>
 
             <div className="mt-5 flex items-center justify-end gap-2">
