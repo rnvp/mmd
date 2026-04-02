@@ -531,6 +531,7 @@ export default function App() {
           {documentState.viewMode !== 'editor' ? (
             <PreviewPane
               content={documentState.content}
+              filePath={documentState.filePath}
               previewRef={previewRef}
               onScroll={() => syncScroll('preview')}
             />

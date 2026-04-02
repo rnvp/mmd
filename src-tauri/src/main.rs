@@ -2,6 +2,7 @@
 
 use std::{env, fs, path::PathBuf};
 
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -25,6 +26,25 @@ fn is_supported_text_path(path: &str) -> bool {
     )
 }
 
+fn mime_type_from_path(path: &str) -> &'static str {
+    match PathBuf::from(path)
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .map(|extension| extension.to_ascii_lowercase())
+        .as_deref()
+    {
+        Some("png") => "image/png",
+        Some("jpg" | "jpeg") => "image/jpeg",
+        Some("gif") => "image/gif",
+        Some("webp") => "image/webp",
+        Some("svg") => "image/svg+xml",
+        Some("bmp") => "image/bmp",
+        Some("ico") => "image/x-icon",
+        Some("avif") => "image/avif",
+        _ => "application/octet-stream",
+    }
+}
+
 #[tauri::command]
 fn read_text_file(path: String) -> Result<FilePayload, String> {
     let path_buf = PathBuf::from(&path);
@@ -41,6 +61,13 @@ fn write_text_file(path: String, content: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn read_image_data_url(path: String) -> Result<String, String> {
+    let bytes = fs::read(PathBuf::from(&path)).map_err(|error| error.to_string())?;
+    let encoded = STANDARD.encode(bytes);
+    Ok(format!("data:{};base64,{}", mime_type_from_path(&path), encoded))
+}
+
+#[tauri::command]
 fn get_launch_file_path() -> Option<String> {
     env::args()
         .skip(1)
@@ -54,6 +81,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             read_text_file,
             write_text_file,
+            read_image_data_url,
             get_launch_file_path
         ])
         .run(tauri::generate_context!())
