@@ -4,6 +4,10 @@
 
 Its focus is simple: keep Markdown editing fast, stable, and lightweight while still feeling like a modern desktop app. It opens quickly, works directly with local files, and provides a side-by-side editing and preview experience by default.
 
+## Preview
+
+![MMD editor screenshot](./mmd.png)
+
 ## Features
 
 - Desktop-native experience with a lightweight startup flow
