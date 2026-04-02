@@ -6,7 +6,7 @@ Its focus is simple: keep Markdown editing fast, stable, and lightweight while s
 
 ## Preview
 
-![MMD editor screenshot](./mmd.png)
+![MMD editor screenshot](./preview.png)
 
 ## Features
 
