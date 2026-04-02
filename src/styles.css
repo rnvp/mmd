@@ -1,0 +1,265 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+:root {
+  color-scheme: light;
+  --app-bg:
+    radial-gradient(circle at top left, rgba(14, 165, 233, 0.14), transparent 28%),
+    radial-gradient(circle at top right, rgba(16, 185, 129, 0.12), transparent 24%),
+    linear-gradient(180deg, #f8fbff 0%, #eef4fb 48%, #e8eef7 100%);
+  --app-text: #1e293b;
+  --app-text-strong: #0f172a;
+  --app-text-soft: #334155;
+  --app-muted: #64748b;
+  --app-muted-soft: #475569;
+  --app-border: rgba(148, 163, 184, 0.26);
+  --app-border-strong: rgba(100, 116, 139, 0.3);
+  --app-border-hover: rgba(71, 85, 105, 0.38);
+  --app-titlebar-bg: rgba(248, 250, 252, 0.9);
+  --app-toolbar-bg: rgba(255, 255, 255, 0.58);
+  --app-pill-bg: rgba(255, 255, 255, 0.76);
+  --app-editor-bg: rgba(255, 255, 255, 0.64);
+  --app-preview-bg: rgba(248, 250, 252, 0.68);
+  --app-footer-bg: rgba(248, 250, 252, 0.8);
+  --app-button-bg: rgba(255, 255, 255, 0.72);
+  --app-button-bg-hover: rgba(255, 255, 255, 0.92);
+  --app-button-outline-bg: rgba(255, 255, 255, 0.7);
+  --app-button-outline-bg-hover: rgba(255, 255, 255, 0.92);
+  --app-ghost-bg-hover: rgba(226, 232, 240, 0.78);
+  --app-accent-bg: rgba(8, 145, 178, 0.12);
+  --app-accent-bg-hover: rgba(8, 145, 178, 0.18);
+  --app-accent-border: rgba(8, 145, 178, 0.26);
+  --app-accent-border-hover: rgba(14, 116, 144, 0.42);
+  --app-accent-text: #0f766e;
+  --app-focus-ring: rgba(8, 145, 178, 0.32);
+  --app-divider: rgba(100, 116, 139, 0.22);
+  --app-divider-hover: rgba(8, 145, 178, 0.52);
+  --app-modal-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.98));
+  --app-modal-shadow: 0 26px 80px rgba(15, 23, 42, 0.18);
+  --app-overlay: rgba(148, 163, 184, 0.22);
+  --app-drop-overlay: rgba(8, 145, 178, 0.08);
+  --app-drop-bg: rgba(255, 255, 255, 0.95);
+  --app-drop-shadow: 0 20px 40px rgba(15, 23, 42, 0.14);
+  --app-menu-bg: rgba(255, 255, 255, 0.98);
+  --app-menu-shadow: 0 24px 48px rgba(15, 23, 42, 0.16);
+  --app-placeholder: #94a3b8;
+  --app-code-inline-border: rgba(148, 163, 184, 0.26);
+  --app-code-inline-bg: rgba(226, 232, 240, 0.72);
+  --app-code-block-border: rgba(148, 163, 184, 0.22);
+  --app-code-block-bg: rgba(241, 245, 249, 0.96);
+  --app-blockquote-border: rgba(8, 145, 178, 0.34);
+  --app-blockquote-bg: rgba(226, 232, 240, 0.72);
+  --app-link: #0369a1;
+  --app-table-header-bg: rgba(226, 232, 240, 0.9);
+  --app-image-border: rgba(148, 163, 184, 0.22);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --app-bg:
+    radial-gradient(circle at top left, rgba(34, 197, 94, 0.14), transparent 28%),
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.16), transparent 24%),
+    linear-gradient(180deg, #05070a 0%, #0b1016 45%, #0e141b 100%);
+  --app-text: rgb(226 232 240);
+  --app-text-strong: #f8fafc;
+  --app-text-soft: #cbd5e1;
+  --app-muted: #64748b;
+  --app-muted-soft: #94a3b8;
+  --app-border: rgba(255, 255, 255, 0.08);
+  --app-border-strong: rgba(255, 255, 255, 0.12);
+  --app-border-hover: rgba(255, 255, 255, 0.2);
+  --app-titlebar-bg: rgba(10, 13, 18, 0.96);
+  --app-toolbar-bg: rgba(255, 255, 255, 0.04);
+  --app-pill-bg: rgba(255, 255, 255, 0.06);
+  --app-editor-bg: rgba(11, 15, 20, 0.52);
+  --app-preview-bg: rgba(12, 17, 24, 0.58);
+  --app-footer-bg: transparent;
+  --app-button-bg: rgba(255, 255, 255, 0.08);
+  --app-button-bg-hover: rgba(255, 255, 255, 0.12);
+  --app-button-outline-bg: rgba(2, 6, 23, 0.4);
+  --app-button-outline-bg-hover: rgba(15, 23, 42, 0.6);
+  --app-ghost-bg-hover: rgba(255, 255, 255, 0.08);
+  --app-accent-bg: rgba(34, 211, 238, 0.12);
+  --app-accent-bg-hover: rgba(34, 211, 238, 0.18);
+  --app-accent-border: rgba(34, 211, 238, 0.25);
+  --app-accent-border-hover: rgba(103, 232, 249, 0.35);
+  --app-accent-text: #cffafe;
+  --app-focus-ring: rgba(103, 232, 249, 0.4);
+  --app-divider: rgba(255, 255, 255, 0.08);
+  --app-divider-hover: rgba(103, 232, 249, 0.5);
+  --app-modal-bg: linear-gradient(180deg, rgba(10, 14, 20, 0.98), rgba(7, 10, 15, 0.98));
+  --app-modal-shadow: 0 26px 80px rgba(0, 0, 0, 0.45);
+  --app-overlay: rgba(0, 0, 0, 0.45);
+  --app-drop-overlay: rgba(34, 211, 238, 0.06);
+  --app-drop-bg: rgba(8, 16, 22, 0.92);
+  --app-drop-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+  --app-menu-bg: rgba(7, 10, 15, 0.99);
+  --app-menu-shadow: 0 24px 48px rgba(0, 0, 0, 0.55);
+  --app-placeholder: #475569;
+  --app-code-inline-border: rgba(255, 255, 255, 0.08);
+  --app-code-inline-bg: rgba(148, 163, 184, 0.12);
+  --app-code-block-border: rgba(255, 255, 255, 0.08);
+  --app-code-block-bg: rgba(2, 6, 23, 0.88);
+  --app-blockquote-border: rgba(34, 211, 238, 0.42);
+  --app-blockquote-bg: rgba(15, 23, 42, 0.52);
+  --app-link: rgb(125 211 252);
+  --app-table-header-bg: rgba(15, 23, 42, 0.72);
+  --app-image-border: rgba(255, 255, 255, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  min-width: 900px;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  background: var(--app-bg);
+  color: var(--app-text);
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+.app-shell {
+  background: var(--app-bg);
+}
+
+.markdown-body {
+  color: var(--app-text);
+}
+
+.markdown-body > :first-child {
+  margin-top: 0;
+}
+
+.markdown-body > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+  margin-top: 1.6em;
+  margin-bottom: 0.7em;
+  font-weight: 700;
+  color: var(--app-text-strong);
+  letter-spacing: -0.02em;
+}
+
+.markdown-body h1 {
+  font-size: 1.9rem;
+}
+
+.markdown-body h2 {
+  font-size: 1.45rem;
+}
+
+.markdown-body p,
+.markdown-body ul,
+.markdown-body ol,
+.markdown-body blockquote,
+.markdown-body pre,
+.markdown-body table {
+  margin: 0 0 1rem;
+}
+
+.markdown-body code {
+  border: 1px solid var(--app-code-inline-border);
+  border-radius: 0.55rem;
+  background: var(--app-code-inline-bg);
+  padding: 0.16rem 0.4rem;
+  font-family: Consolas, Monaco, 'Courier New', monospace;
+  font-size: 0.92em;
+}
+
+.markdown-body pre {
+  overflow: auto;
+  border: 1px solid var(--app-code-block-border);
+  border-radius: 1rem;
+  background: var(--app-code-block-bg);
+  padding: 1rem;
+}
+
+.markdown-body pre code {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.markdown-body blockquote {
+  border-left: 3px solid var(--app-blockquote-border);
+  background: var(--app-blockquote-bg);
+  padding: 0.9rem 1rem;
+  color: var(--app-muted-soft);
+}
+
+.markdown-body a {
+  color: var(--app-link);
+}
+
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  border-radius: 1rem;
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid var(--app-code-block-border);
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+}
+
+.markdown-body th {
+  background: var(--app-table-header-bg);
+  color: var(--app-text-strong);
+}
+
+.markdown-body hr {
+  margin: 1.5rem 0;
+  border: 0;
+  border-top: 1px solid var(--app-code-block-border);
+}
+
+.markdown-body img {
+  max-width: 100%;
+  border-radius: 1rem;
+  border: 1px solid var(--app-image-border);
+}
+
+.title-menu-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.65rem;
+  border: 0;
+  border-radius: 0.95rem;
+  background: transparent;
+  padding: 0.65rem 0.75rem;
+  color: var(--app-text);
+  text-align: left;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.title-menu-item:hover {
+  background: var(--app-ghost-bg-hover);
+  color: var(--app-text-strong);
+}
