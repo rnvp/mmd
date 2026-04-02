@@ -1,4 +1,4 @@
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import type { ClipboardEvent as ReactClipboardEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { save as pickSavePath, open as pickOpenPath } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
@@ -8,6 +8,7 @@ import { PreviewPane } from './components/PreviewPane';
 import { TitleBar } from './components/TitleBar';
 import { Button } from './components/ui/button';
 import type { DocumentState, FilePayload, PendingAction, ThemeMode, TitleAction, ViewMode } from './types';
+import { htmlToMarkdown } from './utils/htmlToMarkdown';
 import { applyMarkdownAction, indentSelection, outdentSelection, type SelectionResult } from './utils/markdown';
 
 const DEFAULT_CONTENT = '';
@@ -96,23 +97,40 @@ export default function App() {
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+      if (event.defaultPrevented || event.isComposing) return;
+
+      const commandKey = event.ctrlKey || event.metaKey;
+      if (!commandKey) return;
+
+      const key = event.key.toLowerCase();
+
+      if (key === 's') {
         event.preventDefault();
+        if (event.shiftKey) {
+          void handleSaveAs();
+          return;
+        }
         void handleSave();
+        return;
       }
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'o') {
+
+      if (event.shiftKey) return;
+
+      if (key === 'o') {
         event.preventDefault();
         void handleOpen();
+        return;
       }
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'n') {
+
+      if (key === 'n') {
         event.preventDefault();
         void handleNew();
       }
     };
 
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [documentState.filePath]);
+    window.addEventListener('keydown', handler, { capture: true });
+    return () => window.removeEventListener('keydown', handler, { capture: true });
+  }, [documentState.filePath, documentState.content]);
 
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -236,6 +254,21 @@ export default function App() {
       if (!textarea) return;
       textarea.focus();
       textarea.setSelectionRange(result.selectionStart, result.selectionEnd);
+    });
+  }
+
+  function insertAtSelection(text: string) {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const { selectionStart, selectionEnd } = textarea;
+    const nextValue = `${documentState.content.slice(0, selectionStart)}${text}${documentState.content.slice(selectionEnd)}`;
+    updateContent(nextValue);
+
+    const nextCursor = selectionStart + text.length;
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(nextCursor, nextCursor);
     });
   }
 
@@ -424,17 +457,34 @@ export default function App() {
     }
 
     const shortcuts: Record<string, TitleAction> = {
+      '1': 'heading',
+      '7': 'orderedList',
+      '8': 'bulletList',
+      '/': 'quote',
       b: 'bold',
+      e: 'code',
+      g: 'image',
       i: 'italic',
       k: 'link',
-      e: 'code',
-      '1': 'heading'
+      '`': 'codeBlock'
     };
 
     const action = shortcuts[key.toLowerCase()];
     if (!action) return;
     event.preventDefault();
     handleFormatting(action);
+  }
+
+  function handleEditorPaste(event: ReactClipboardEvent<HTMLTextAreaElement>) {
+    const html = event.clipboardData.getData('text/html');
+    if (!html) return;
+
+    const markdown = htmlToMarkdown(html);
+    if (!markdown) return;
+
+    event.preventDefault();
+    insertAtSelection(markdown);
+    setStatusMessage('Pasted rich text as Markdown');
   }
 
   async function handleAction(action: TitleAction) {
@@ -500,6 +550,7 @@ export default function App() {
               textareaRef={textareaRef}
               onChange={updateContent}
               onKeyDown={handleEditorKeyDown}
+              onPaste={handleEditorPaste}
               onScroll={() => syncScroll('editor')}
             />
           ) : null}
