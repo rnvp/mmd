@@ -2,7 +2,6 @@ import {
   Bold,
   ChevronDown,
   ChevronsUpDown,
-  Ellipsis,
   Eye,
   FileCode2,
   FileInput,
@@ -21,9 +20,7 @@ import {
   Sun,
   X
 } from 'lucide-react';
-import type { MouseEvent as ReactMouseEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import type { ThemeMode, TitleAction, ViewMode } from '../types';
 import { Button } from './ui/button';
 
@@ -50,10 +47,12 @@ const formatActions: Array<{ action: TitleAction; icon: typeof Hash; label: stri
   { action: 'image', icon: Image, label: 'Image' }
 ];
 
+const toolbarGroupClass =
+  'flex h-7 items-center gap-0.5 rounded-lg border border-[var(--app-border)] bg-[var(--app-toolbar-bg)] px-0.5';
+
 export function TitleBar({ fileName, filePath, isDirty, viewMode, themeMode, onAction, onToggleTheme }: TitleBarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const appWindow = getCurrentWindow();
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
@@ -71,25 +70,8 @@ export function TitleBar({ fileName, filePath, isDirty, viewMode, themeMode, onA
     onAction(action);
   }
 
-  function handleDragAreaMouseDown(event: ReactMouseEvent<HTMLDivElement>) {
-    if (event.button !== 0) return;
-    const target = event.target as HTMLElement;
-    if (target.closest('button, a, input, textarea, select, [role="button"]')) {
-      return;
-    }
-    void appWindow.startDragging();
-  }
-
-  function handleDragAreaDoubleClick(event: ReactMouseEvent<HTMLDivElement>) {
-    const target = event.target as HTMLElement;
-    if (target.closest('button, a, input, textarea, select, [role="button"]')) {
-      return;
-    }
-    void appWindow.toggleMaximize();
-  }
-
   return (
-    <header className="relative z-30 flex h-11 items-center gap-2 border-b border-[var(--app-border)] bg-[var(--app-titlebar-bg)] px-3 backdrop-blur-xl">
+    <header className="relative z-30 flex h-10 items-center gap-2 border-b border-[var(--app-border)] bg-[var(--app-titlebar-bg)] px-3 backdrop-blur-xl">
       <div className="flex min-w-0 items-center gap-2">
         <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--app-accent-border)] bg-[var(--app-accent-bg)] text-[var(--app-accent-text)]">
           <FileText className="h-4 w-4" />
@@ -106,14 +88,13 @@ export function TitleBar({ fileName, filePath, isDirty, viewMode, themeMode, onA
       </div>
 
       <div
+        data-tauri-drag-region
         className="min-w-16 flex-1 self-stretch"
-        onMouseDown={handleDragAreaMouseDown}
-        onDoubleClick={handleDragAreaDoubleClick}
         title="Drag window"
       />
 
       <div className="relative z-40 flex items-center gap-1.5">
-        <div className="hidden items-center gap-1 rounded-2xl border border-[var(--app-border)] bg-[var(--app-toolbar-bg)] p-1 xl:flex">
+        <div className={`${toolbarGroupClass} hidden xl:flex`}>
           {formatActions.map(({ action, icon: Icon, label }) => (
             <Button key={action} variant="ghost" size="icon" title={label} onClick={() => onAction(action)}>
               <Icon className="h-4 w-4" />
@@ -121,7 +102,7 @@ export function TitleBar({ fileName, filePath, isDirty, viewMode, themeMode, onA
           ))}
         </div>
 
-        <div className="flex items-center gap-1 rounded-2xl border border-[var(--app-border)] bg-[var(--app-toolbar-bg)] p-1">
+        <div className={toolbarGroupClass}>
           <Button variant="ghost" size="icon" title="Split view" active={viewMode === 'split'} onClick={() => onAction('split')}>
             <PanelLeft className="h-4 w-4" />
           </Button>
@@ -133,7 +114,7 @@ export function TitleBar({ fileName, filePath, isDirty, viewMode, themeMode, onA
           </Button>
         </div>
 
-        <div className="flex items-center gap-1 rounded-2xl border border-[var(--app-border)] bg-[var(--app-toolbar-bg)] p-1">
+        <div className={toolbarGroupClass}>
           <Button variant="ghost" size="icon" title="New" onClick={() => onAction('new')}>
             <FilePlus2 className="h-4 w-4" />
           </Button>
@@ -155,9 +136,7 @@ export function TitleBar({ fileName, filePath, isDirty, viewMode, themeMode, onA
         </Button>
 
         <div ref={menuRef} className="relative z-50">
-          <Button variant="outline" size="sm" title="More" onClick={() => setMenuOpen((value) => !value)}>
-            <Ellipsis className="h-4 w-4" />
-            More
+          <Button variant="outline" size="icon" title="More" onClick={() => setMenuOpen((value) => !value)}>
             <ChevronDown className="h-3.5 w-3.5" />
           </Button>
 
@@ -194,13 +173,13 @@ export function TitleBar({ fileName, filePath, isDirty, viewMode, themeMode, onA
         </div>
 
         <div className="flex items-center gap-0.5">
-          <Button className="rounded-lg" variant="ghost" size="icon" title="Minimize" onClick={() => onAction('minimize')}>
+          <Button className="rounded-md" variant="ghost" size="icon" title="Minimize" onClick={() => onAction('minimize')}>
             <span className="block h-px w-3 bg-current" />
           </Button>
-          <Button className="rounded-lg" variant="ghost" size="icon" title="Maximize" onClick={() => onAction('toggleMaximize')}>
+          <Button className="rounded-md" variant="ghost" size="icon" title="Maximize" onClick={() => onAction('toggleMaximize')}>
             <ChevronsUpDown className="h-4 w-4" />
           </Button>
-          <Button className="rounded-lg" variant="ghost" size="icon" title="Close" onClick={() => onAction('closeWindow')}>
+          <Button className="rounded-md" variant="ghost" size="icon" title="Close" onClick={() => onAction('closeWindow')}>
             <X className="h-4 w-4" />
           </Button>
         </div>

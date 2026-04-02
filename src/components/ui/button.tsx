@@ -16,17 +16,17 @@ const variantClasses: Record<ButtonVariant, string> = {
   default:
     'border border-[var(--app-border)] bg-[var(--app-button-bg)] text-[var(--app-text)] hover:border-[var(--app-border-hover)] hover:bg-[var(--app-button-bg-hover)]',
   ghost:
-    'border border-transparent bg-transparent text-[var(--app-text-soft)] hover:bg-[var(--app-ghost-bg-hover)] hover:text-[var(--app-text-strong)]',
+    'border border-transparent bg-transparent text-[var(--app-text-soft)] hover:bg-[var(--app-ghost-bg-soft-hover)] hover:text-[var(--app-text-strong)]',
   outline:
-    'border border-[var(--app-border-strong)] bg-[var(--app-button-outline-bg)] text-[var(--app-text)] hover:border-[var(--app-border-hover)] hover:bg-[var(--app-button-outline-bg-hover)]',
+    'border border-[var(--app-border-strong)] bg-[var(--app-button-outline-bg)] text-[var(--app-text)] hover:border-[var(--app-border-strong)] hover:bg-[var(--app-button-outline-bg-soft-hover)]',
   accent:
     'border border-[var(--app-accent-border)] bg-[var(--app-accent-bg)] text-[var(--app-accent-text)] hover:border-[var(--app-accent-border-hover)] hover:bg-[var(--app-accent-bg-hover)]'
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: 'h-8 px-2.5 text-[12px]',
+  sm: 'h-7 px-2 text-[12px]',
   md: 'h-9 px-3 text-[13px]',
-  icon: 'h-8 w-8 px-0'
+  icon: 'h-7 w-7 px-0'
 };
 
 export function Button({
@@ -40,10 +40,10 @@ export function Button({
   return (
     <button
       className={cn(
-        'inline-flex items-center justify-center gap-1.5 rounded-xl font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)] disabled:pointer-events-none disabled:opacity-50',
+        'inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)] disabled:pointer-events-none disabled:opacity-50',
         variantClasses[variant],
         sizeClasses[size],
-        active && 'border-[var(--app-accent-border-hover)] bg-[var(--app-accent-bg-hover)] text-[var(--app-accent-text)]',
+        active && 'border-[var(--app-button-active-border)] bg-[var(--app-button-active-bg)] text-[var(--app-text-strong)]',
         className
       )}
       {...props}

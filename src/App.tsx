@@ -10,20 +10,7 @@ import { Button } from './components/ui/button';
 import type { DocumentState, FilePayload, PendingAction, ThemeMode, TitleAction, ViewMode } from './types';
 import { applyMarkdownAction, indentSelection, outdentSelection, type SelectionResult } from './utils/markdown';
 
-const DEFAULT_CONTENT = `# MMD
-
-面向 Markdown、提示词、代码片段与命令文本的桌面编辑器。
-
-## Features
-
-- 默认双栏
-- UTF-8 读写
-- 适合 Codex 工作流
-
-\`\`\`bash
-codex run
-\`\`\`
-`;
+const DEFAULT_CONTENT = '';
 
 const STORAGE_KEY = 'mmd.ui.preferences.v1';
 
