@@ -529,9 +529,6 @@ export default function App() {
   return (
     <div className="app-shell relative isolate flex h-screen flex-col text-[var(--app-text)]">
       <TitleBar
-        fileName={documentState.fileName}
-        filePath={documentState.filePath}
-        isDirty={documentState.isDirty}
         viewMode={documentState.viewMode}
         themeMode={themeMode}
         onAction={(action) => void handleAction(action)}
@@ -579,11 +576,10 @@ export default function App() {
 
       <footer className="flex items-center justify-between border-t border-[var(--app-border)] bg-[var(--app-footer-bg)] px-4 py-2 text-xs text-[var(--app-muted)]">
         <div className="flex items-center gap-3">
-          <span>{documentState.isDirty ? 'Modified' : 'Synchronized'}</span>
-          <span>{documentState.filePath ?? 'Unsaved document'}</span>
+          <span>{documentState.isDirty ? 'Unsaved' : 'Saved'}</span>
+          <span>{documentState.content.length} chars</span>
           <span>{documentState.content.split('\n').length} lines</span>
         </div>
-        <span>{statusMessage} · {documentState.content.length} chars</span>
       </footer>
 
       {pendingAction ? (

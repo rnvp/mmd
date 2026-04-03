@@ -24,3 +24,8 @@ declare module 'turndown' {
 declare module 'turndown-plugin-gfm' {
   export const gfm: unknown;
 }
+
+declare module '*.png' {
+  const src: string;
+  export default src;
+}
