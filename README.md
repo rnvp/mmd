@@ -1,6 +1,6 @@
 # MMD
 
-`MMD` currently stands for `Micro md editor`.
+- `MMD` currently stands for `Micro md editor`.
 
 - This project exists because I could not find a Markdown editor that felt right to me. So I decided to build another wheel.
 
