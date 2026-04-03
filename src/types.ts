@@ -16,6 +16,12 @@ export type FilePayload = {
   content: string;
 };
 
+export type InsertableImage = {
+  absolutePath: string;
+  relativePath: string;
+  fileName: string;
+};
+
 export type TitleAction =
   | 'new'
   | 'open'

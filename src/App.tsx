@@ -7,7 +7,7 @@ import { EditorPane } from './components/EditorPane';
 import { PreviewPane } from './components/PreviewPane';
 import { TitleBar } from './components/TitleBar';
 import { Button } from './components/ui/button';
-import type { DocumentState, FilePayload, PendingAction, ThemeMode, TitleAction, ViewMode } from './types';
+import type { DocumentState, FilePayload, InsertableImage, PendingAction, ThemeMode, TitleAction, ViewMode } from './types';
 import { htmlToMarkdown } from './utils/htmlToMarkdown';
 import { applyMarkdownAction, indentSelection, outdentSelection, type SelectionResult } from './utils/markdown';
 
@@ -60,6 +60,24 @@ function clampRatio(value: number) {
   return Math.min(0.72, Math.max(0.28, value));
 }
 
+function escapeMarkdownAltText(fileName: string) {
+  return fileName.replace(/\.[^.]+$/, '').replace(/[[\]\\]/g, '\\$&') || 'image';
+}
+
+function insertMarkdownImage(value: string, start: number, end: number, relativePath: string, fileName: string): SelectionResult {
+  const altText = escapeMarkdownAltText(fileName);
+  const markdown = `![${altText}](${relativePath})`;
+  return {
+    value: `${value.slice(0, start)}${markdown}${value.slice(end)}`,
+    selectionStart: start + markdown.length,
+    selectionEnd: start + markdown.length
+  };
+}
+
+type ImagePickerItem = InsertableImage & {
+  previewSrc: string | null;
+};
+
 export default function App() {
   const storedPreferences = loadStoredPreferences();
   const [documentState, setDocumentState] = useState<DocumentState>(() => {
@@ -71,6 +89,9 @@ export default function App() {
   const [isDraggingDivider, setIsDraggingDivider] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [imagePickerOpen, setImagePickerOpen] = useState(false);
+  const [imagePickerLoading, setImagePickerLoading] = useState(false);
+  const [imagePickerItems, setImagePickerItems] = useState<ImagePickerItem[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const droppedPathRef = useRef<string | null>(null);
@@ -272,6 +293,21 @@ export default function App() {
     });
   }
 
+  function insertImageAtSelection(relativePath: string, fileName: string) {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const result = insertMarkdownImage(
+      documentState.content,
+      textarea.selectionStart,
+      textarea.selectionEnd,
+      relativePath,
+      fileName
+    );
+
+    applySelectionResult(result);
+  }
+
   function syncScroll(source: 'editor' | 'preview') {
     const editor = textareaRef.current;
     const preview = previewRef.current;
@@ -439,6 +475,50 @@ export default function App() {
     applySelectionResult(result);
   }
 
+  async function openImagePicker() {
+    if (imagePickerOpen) {
+      setImagePickerOpen(false);
+      return;
+    }
+
+    if (!documentState.filePath) {
+      setStatusMessage('Save the document before inserting local images');
+      return;
+    }
+
+    setImagePickerOpen(true);
+    setImagePickerLoading(true);
+
+    try {
+      const images = await invoke<InsertableImage[]>('list_insertable_images', { documentPath: documentState.filePath });
+      const items = await Promise.all(
+        images.map(async (image) => {
+          try {
+            const previewSrc = await invoke<string>('read_image_data_url', { path: image.absolutePath });
+            return { ...image, previewSrc };
+          } catch {
+            return { ...image, previewSrc: null };
+          }
+        })
+      );
+
+      setImagePickerItems(items);
+      setStatusMessage(items.length > 0 ? `Loaded ${items.length} images` : 'No images found in the document folder');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load images';
+      setImagePickerItems([]);
+      setStatusMessage(message);
+    } finally {
+      setImagePickerLoading(false);
+    }
+  }
+
+  function handleImageSelect(relativePath: string, fileName: string) {
+    insertImageAtSelection(relativePath, fileName);
+    setImagePickerOpen(false);
+    setStatusMessage(`Inserted ${relativePath}`);
+  }
+
   function handleEditorKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
     const { key, ctrlKey, metaKey, shiftKey, currentTarget } = event;
     const commandKey = ctrlKey || metaKey;
@@ -511,6 +591,9 @@ export default function App() {
         case 'closeWindow':
           await requestAction('closeWindow');
           break;
+        case 'image':
+          await openImagePicker();
+          break;
         case 'split':
         case 'editor':
         case 'preview':
@@ -531,7 +614,12 @@ export default function App() {
       <TitleBar
         viewMode={documentState.viewMode}
         themeMode={themeMode}
+        imagePickerOpen={imagePickerOpen}
+        imagePickerLoading={imagePickerLoading}
+        imagePickerItems={imagePickerItems}
         onAction={(action) => void handleAction(action)}
+        onCloseImagePicker={() => setImagePickerOpen(false)}
+        onSelectImage={(relativePath, fileName) => handleImageSelect(relativePath, fileName)}
         onToggleTheme={handleToggleTheme}
       />
 
