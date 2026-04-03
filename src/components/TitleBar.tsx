@@ -83,8 +83,8 @@ export function TitleBar({ viewMode, themeMode, onAction, onToggleTheme }: Title
           </button>
 
           {menuOpen ? (
-            <div className="absolute left-0 top-[calc(100%+10px)] z-[90] min-w-56 rounded-2xl border border-[var(--app-border-strong)] bg-[var(--app-menu-bg)] p-2 shadow-[var(--app-menu-shadow)] backdrop-blur-xl">
-              <div className="px-2 pb-2 pt-1 text-[11px] uppercase tracking-[0.22em] text-[var(--app-muted)]">File</div>
+            <div className="absolute left-0 top-[calc(100%+8px)] z-[90] min-w-48 rounded-xl border border-[var(--app-border-strong)] bg-[var(--app-menu-bg)] p-1.5 shadow-[var(--app-menu-shadow)] backdrop-blur-xl">
+              <div className="px-2 pb-1.5 pt-1 text-[10px] uppercase tracking-[0.18em] text-[var(--app-muted)]">File</div>
               <button className="title-menu-item" onClick={() => handleMenuAction('new')}>
                 <FilePlus2 className="h-4 w-4" />
                 New document
@@ -103,7 +103,7 @@ export function TitleBar({ viewMode, themeMode, onAction, onToggleTheme }: Title
               </button>
 
               <div className="my-2 h-px bg-[var(--app-border)]" />
-              <div className="px-2 pb-2 pt-1 text-[11px] uppercase tracking-[0.22em] text-[var(--app-muted)]">Format</div>
+              <div className="px-2 pb-1.5 pt-1 text-[10px] uppercase tracking-[0.18em] text-[var(--app-muted)]">Format</div>
               {formatActions.map(({ action, icon: Icon, label }) => (
                 <button key={action} className="title-menu-item" onClick={() => handleMenuAction(action)}>
                   <Icon className="h-4 w-4" />
