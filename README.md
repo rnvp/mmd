@@ -2,19 +2,13 @@
 
 `MMD` currently stands for `Micro md editor`.
 
-This project exists because
-I could not find a Markdown editor
-that felt right to me.
+- This project exists because I could not find a Markdown editor that felt right to me. So I decided to build another wheel.
 
-So I decided
-to build another wheel.
-
-I want it to be simple.
-I want it to be fast.
-I want it to avoid complex features.
-I want it to use a two-pane layout by default.
-I want it to handle text cleanly
-without encoding issues.
+- I want it to be simple.
+- I want it to be fast.
+- I want it to avoid complex features.
+- I want it to use a two-pane layout by default.
+- I want it to handle text cleanly, without encoding issues.
 
 ## Preview
 
