@@ -8,7 +8,7 @@ import { PreviewPane } from './components/PreviewPane';
 import { TitleBar } from './components/TitleBar';
 import { Button } from './components/ui/button';
 import type { DocumentState, FilePayload, InsertableImage, PendingAction, ThemeMode, TitleAction, ViewMode } from './types';
-import { htmlToMarkdown } from './utils/htmlToMarkdown';
+import { htmlToMarkdownFromClipboard } from './utils/htmlToMarkdown';
 import { applyMarkdownAction, indentSelection, outdentSelection, type SelectionResult } from './utils/markdown';
 
 const DEFAULT_CONTENT = '';
@@ -559,7 +559,8 @@ export default function App() {
     const html = event.clipboardData.getData('text/html');
     if (!html) return;
 
-    const markdown = htmlToMarkdown(html);
+    const plainText = event.clipboardData.getData('text/plain');
+    const markdown = htmlToMarkdownFromClipboard(html, plainText);
     if (!markdown) return;
 
     event.preventDefault();
