@@ -54,6 +54,13 @@
   --app-code-inline-bg: rgba(226, 232, 240, 0.72);
   --app-code-block-border: rgba(148, 163, 184, 0.22);
   --app-code-block-bg: rgba(241, 245, 249, 0.96);
+  --app-code-hl-text: #1e293b;
+  --app-code-hl-comment: #64748b;
+  --app-code-hl-red: #c2410c;
+  --app-code-hl-orange: #b45309;
+  --app-code-hl-green: #047857;
+  --app-code-hl-blue: #1d4ed8;
+  --app-code-hl-purple: #7c3aed;
   --app-blockquote-border: rgba(8, 145, 178, 0.34);
   --app-blockquote-bg: rgba(226, 232, 240, 0.72);
   --app-link: #0369a1;
@@ -111,6 +118,13 @@
   --app-code-inline-bg: rgba(148, 163, 184, 0.12);
   --app-code-block-border: rgba(255, 255, 255, 0.08);
   --app-code-block-bg: rgba(2, 6, 23, 0.88);
+  --app-code-hl-text: #dbe6f3;
+  --app-code-hl-comment: #7c8ba1;
+  --app-code-hl-red: #f38ba8;
+  --app-code-hl-orange: #fab387;
+  --app-code-hl-green: #a6e3a1;
+  --app-code-hl-blue: #89b4fa;
+  --app-code-hl-purple: #cba6f7;
   --app-blockquote-border: rgba(34, 211, 238, 0.42);
   --app-blockquote-bg: rgba(15, 23, 42, 0.52);
   --app-link: rgb(125 211 252);
@@ -198,6 +212,7 @@ textarea {
 }
 
 .markdown-body pre {
+  max-width: 100%;
   overflow: auto;
   border: 1px solid var(--app-code-block-border);
   border-radius: 1rem;
@@ -209,6 +224,64 @@ textarea {
   border: 0;
   background: transparent;
   padding: 0;
+}
+
+.markdown-body pre code.hljs {
+  display: block;
+  overflow-x: auto;
+  color: var(--app-code-hl-text);
+}
+
+.markdown-body .hljs-comment,
+.markdown-body .hljs-quote {
+  color: var(--app-code-hl-comment);
+  font-style: italic;
+}
+
+.markdown-body .hljs-variable,
+.markdown-body .hljs-template-variable,
+.markdown-body .hljs-attribute,
+.markdown-body .hljs-tag,
+.markdown-body .hljs-name,
+.markdown-body .hljs-regexp,
+.markdown-body .hljs-link,
+.markdown-body .hljs-selector-id,
+.markdown-body .hljs-selector-class {
+  color: var(--app-code-hl-red);
+}
+
+.markdown-body .hljs-number,
+.markdown-body .hljs-meta,
+.markdown-body .hljs-built_in,
+.markdown-body .hljs-builtin-name,
+.markdown-body .hljs-literal,
+.markdown-body .hljs-type,
+.markdown-body .hljs-params {
+  color: var(--app-code-hl-orange);
+}
+
+.markdown-body .hljs-string,
+.markdown-body .hljs-symbol,
+.markdown-body .hljs-bullet {
+  color: var(--app-code-hl-green);
+}
+
+.markdown-body .hljs-title,
+.markdown-body .hljs-section {
+  color: var(--app-code-hl-blue);
+}
+
+.markdown-body .hljs-keyword,
+.markdown-body .hljs-selector-tag {
+  color: var(--app-code-hl-purple);
+}
+
+.markdown-body .hljs-emphasis {
+  font-style: italic;
+}
+
+.markdown-body .hljs-strong {
+  font-weight: 700;
 }
 
 .markdown-body blockquote {

@@ -4,6 +4,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { dirname, isAbsolute, join, normalize } from '@tauri-apps/api/path';
 import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
+import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
 
 type PreviewPaneProps = {
@@ -99,11 +100,12 @@ function MarkdownImage({ src, alt = '', documentPath, ...props }: MarkdownImageP
 
 export function PreviewPane({ content, filePath, previewRef, onScroll }: PreviewPaneProps) {
   return (
-    <section className="markdown-shell flex h-full min-h-0 flex-col border border-[var(--app-border)] border-l-0 bg-[var(--app-preview-bg)]">
-      <div ref={previewRef} onScroll={onScroll} className="min-h-0 flex-1 overflow-auto px-5 py-5">
-        <article className="markdown-body mx-auto max-w-none">
+    <section className="markdown-shell flex h-full min-h-0 min-w-0 flex-col border border-[var(--app-border)] border-l-0 bg-[var(--app-preview-bg)]">
+      <div ref={previewRef} onScroll={onScroll} className="min-h-0 min-w-0 flex-1 overflow-auto px-5 py-5">
+        <article className="markdown-body mx-auto min-w-0 max-w-none">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeHighlight]}
             components={{
               img: ({ node: _node, ...imgProps }) => <MarkdownImage {...imgProps} documentPath={filePath} />
             }}

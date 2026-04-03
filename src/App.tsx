@@ -537,7 +537,7 @@ export default function App() {
 
       <main className="relative z-0 min-h-0 flex-1 px-0 pb-0 pt-0">
         <div
-          className="grid h-full min-h-0 gap-0"
+          className="grid h-full min-h-0 min-w-0 gap-0"
           style={{ gridTemplateColumns: layoutColumns }}
         >
           {documentState.viewMode !== 'preview' ? (
