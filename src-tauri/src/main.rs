@@ -3,10 +3,13 @@
 use std::{
     env, fs,
     path::{Path, PathBuf},
+    sync::Mutex,
 };
 
 use base64::{engine::general_purpose::STANDARD, Engine as _};
+use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use serde::Serialize;
+use tauri::{AppHandle, Emitter, State};
 
 #[derive(Serialize)]
 struct FilePayload {
@@ -20,6 +23,16 @@ struct InsertableImage {
     absolute_path: String,
     relative_path: String,
     file_name: String,
+}
+
+#[derive(Clone, Serialize)]
+struct FileChangedPayload {
+    path: String,
+}
+
+#[derive(Default)]
+struct FileWatcherState {
+    watcher: Mutex<Option<RecommendedWatcher>>,
 }
 
 fn normalize_utf8(input: String) -> String {
@@ -110,6 +123,28 @@ fn collect_images_from_img_dir(images: &mut Vec<InsertableImage>, base_dir: &Pat
     Ok(())
 }
 
+fn canonicalize_or_original(path: &Path) -> PathBuf {
+    fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
+}
+
+fn event_targets_path(event: &Event, watched_path: &Path) -> bool {
+    matches!(
+        event.kind,
+        EventKind::Modify(_) | EventKind::Create(_) | EventKind::Remove(_)
+    ) && event.paths.iter().any(|path| {
+        path == watched_path || canonicalize_or_original(path) == canonicalize_or_original(watched_path)
+    })
+}
+
+fn emit_file_changed(app: &AppHandle, watched_path: &Path) {
+    let _ = app.emit(
+        "mmd://file-changed",
+        FileChangedPayload {
+            path: watched_path.to_string_lossy().to_string(),
+        },
+    );
+}
+
 #[tauri::command]
 fn read_text_file(path: String) -> Result<FilePayload, String> {
     let path_buf = PathBuf::from(&path);
@@ -123,6 +158,47 @@ fn read_text_file(path: String) -> Result<FilePayload, String> {
 #[tauri::command]
 fn write_text_file(path: String, content: String) -> Result<(), String> {
     fs::write(PathBuf::from(path), content.as_bytes()).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn watch_text_file(
+    app: AppHandle,
+    state: State<'_, FileWatcherState>,
+    path: Option<String>,
+) -> Result<(), String> {
+    let mut watcher_slot = state.watcher.lock().map_err(|error| error.to_string())?;
+    watcher_slot.take();
+
+    let Some(path) = path else {
+        return Ok(());
+    };
+
+    let watched_path = canonicalize_or_original(Path::new(&path));
+    let watch_root = watched_path
+        .parent()
+        .ok_or_else(|| "Document directory not found".to_string())?
+        .to_path_buf();
+
+    let app_handle = app.clone();
+    let watched_path_for_callback = watched_path.clone();
+    let mut watcher = RecommendedWatcher::new(
+        move |result: notify::Result<Event>| {
+            if let Ok(event) = result {
+                if event_targets_path(&event, &watched_path_for_callback) {
+                    emit_file_changed(&app_handle, &watched_path_for_callback);
+                }
+            }
+        },
+        Config::default(),
+    )
+    .map_err(|error| error.to_string())?;
+
+    watcher
+        .watch(&watch_root, RecursiveMode::NonRecursive)
+        .map_err(|error| error.to_string())?;
+
+    *watcher_slot = Some(watcher);
+    Ok(())
 }
 
 #[tauri::command]
@@ -170,10 +246,12 @@ fn get_launch_file_path() -> Option<String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(FileWatcherState::default())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             read_text_file,
             write_text_file,
+            watch_text_file,
             read_image_data_url,
             list_insertable_images,
             get_launch_file_path

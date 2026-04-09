@@ -2,12 +2,22 @@ import type { ClipboardEvent as ReactClipboardEvent, KeyboardEvent as ReactKeybo
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { save as pickSavePath, open as pickOpenPath } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { EditorPane } from './components/EditorPane';
 import { PreviewPane } from './components/PreviewPane';
 import { TitleBar } from './components/TitleBar';
 import { Button } from './components/ui/button';
-import type { DocumentState, FilePayload, InsertableImage, PendingAction, ThemeMode, TitleAction, ViewMode } from './types';
+import type {
+  DocumentState,
+  FileChangedPayload,
+  FilePayload,
+  InsertableImage,
+  PendingAction,
+  ThemeMode,
+  TitleAction,
+  ViewMode
+} from './types';
 import { htmlToMarkdownFromClipboard } from './utils/htmlToMarkdown';
 import { applyMarkdownAction, indentSelection, outdentSelection, type SelectionResult } from './utils/markdown';
 
@@ -56,6 +66,10 @@ function fileNameFromPath(path: string | null) {
   return parts[parts.length - 1] || 'Untitled.md';
 }
 
+function normalizeFileIdentity(path: string | null) {
+  return path ? path.replaceAll('\\', '/').toLowerCase() : null;
+}
+
 function clampRatio(value: number) {
   return Math.min(0.72, Math.max(0.28, value));
 }
@@ -69,6 +83,9 @@ function insertMarkdownImage(value: string, start: number, end: number, relative
   const markdown = `![${altText}](${relativePath})`;
   return {
     value: `${value.slice(0, start)}${markdown}${value.slice(end)}`,
+    replaceStart: start,
+    replaceEnd: end,
+    replacementText: markdown,
     selectionStart: start + markdown.length,
     selectionEnd: start + markdown.length
   };
@@ -86,18 +103,29 @@ export default function App() {
   });
   const [themeMode, setThemeMode] = useState<ThemeMode>(storedPreferences?.themeMode ?? resolvePreferredTheme());
   const [statusMessage, setStatusMessage] = useState('Ready');
+  const [fileSyncNotice, setFileSyncNotice] = useState<string | null>(null);
   const [isDraggingDivider, setIsDraggingDivider] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [dragActive, setDragActive] = useState(false);
   const [imagePickerOpen, setImagePickerOpen] = useState(false);
   const [imagePickerLoading, setImagePickerLoading] = useState(false);
   const [imagePickerItems, setImagePickerItems] = useState<ImagePickerItem[]>([]);
+  const [editorContentVersion, setEditorContentVersion] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const droppedPathRef = useRef<string | null>(null);
   const syncSourceRef = useRef<'editor' | 'preview' | null>(null);
   const launchFileHandledRef = useRef(false);
+  const documentStateRef = useRef(documentState);
+  const externalReloadTimerRef = useRef<number | null>(null);
+  const pollingIntervalRef = useRef<number | null>(null);
+  const fileSyncNoticeTimerRef = useRef<number | null>(null);
+  const lastLocalWriteRef = useRef<{ path: string; at: number } | null>(null);
   const appWindow = getCurrentWindow();
+
+  useEffect(() => {
+    documentStateRef.current = documentState;
+  }, [documentState]);
 
   useEffect(() => {
     const onPointerMove = (event: PointerEvent) => {
@@ -196,6 +224,172 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const watchedPath = documentState.filePath;
+    setFileSyncNotice(null);
+
+    void invoke('watch_text_file', { path: watchedPath }).catch((error) => {
+      const message = error instanceof Error ? error.message : 'Failed to watch file changes';
+      setStatusMessage(message);
+    });
+
+    return () => {
+      if (externalReloadTimerRef.current !== null) {
+        window.clearTimeout(externalReloadTimerRef.current);
+        externalReloadTimerRef.current = null;
+      }
+      if (pollingIntervalRef.current !== null) {
+        window.clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      if (fileSyncNoticeTimerRef.current !== null) {
+        window.clearTimeout(fileSyncNoticeTimerRef.current);
+        fileSyncNoticeTimerRef.current = null;
+      }
+    };
+  }, [documentState.filePath]);
+
+  useEffect(() => {
+    const watchedPath = documentState.filePath;
+    if (!watchedPath) {
+      if (pollingIntervalRef.current !== null) {
+        window.clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      return;
+    }
+
+    let disposed = false;
+    let isChecking = false;
+
+    const checkExternalFileChange = async () => {
+      if (disposed || isChecking) return;
+
+      const current = documentStateRef.current;
+      if (normalizeFileIdentity(current.filePath) !== normalizeFileIdentity(watchedPath)) return;
+
+      const lastLocalWrite = lastLocalWriteRef.current;
+      if (
+        lastLocalWrite &&
+        normalizeFileIdentity(lastLocalWrite.path) === normalizeFileIdentity(watchedPath) &&
+        Date.now() - lastLocalWrite.at < 1200
+      ) {
+        return;
+      }
+
+      isChecking = true;
+
+      try {
+        const payload = await invoke<FilePayload>('read_text_file', { path: watchedPath });
+        if (disposed) return;
+        if (normalizeFileIdentity(documentStateRef.current.filePath) !== normalizeFileIdentity(payload.path)) return;
+
+        const latest = documentStateRef.current;
+        if (payload.content === latest.savedContent) {
+          return;
+        }
+
+        if (latest.isDirty) {
+          showFileSyncNotice('File changed on disk. Local unsaved edits were kept.');
+          setStatusMessage(`External update detected for ${fileNameFromPath(payload.path)}`);
+          return;
+        }
+
+        replaceDocument((prev) => ({
+          ...prev,
+          filePath: payload.path,
+          fileName: fileNameFromPath(payload.path),
+          content: payload.content,
+          savedContent: payload.content,
+          isDirty: false
+        }));
+        showFileSyncNotice(`Synced from disk: ${fileNameFromPath(payload.path)}`);
+        setStatusMessage(`Reloaded ${fileNameFromPath(payload.path)} after external change`);
+      } catch {
+        // Ignore transient read errors while the other editor is still writing the file.
+      } finally {
+        isChecking = false;
+      }
+    };
+
+    pollingIntervalRef.current = window.setInterval(() => {
+      void checkExternalFileChange();
+    }, 1200);
+
+    return () => {
+      disposed = true;
+      if (pollingIntervalRef.current !== null) {
+        window.clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [documentState.filePath]);
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    const handleExternalFileChange = async (path: string) => {
+      const current = documentStateRef.current;
+      if (normalizeFileIdentity(current.filePath) !== normalizeFileIdentity(path)) return;
+
+      if (current.isDirty) {
+        showFileSyncNotice('File changed on disk. Local unsaved edits were kept.');
+        setStatusMessage(`External update detected for ${fileNameFromPath(path)}`);
+        return;
+      }
+
+      const lastLocalWrite = lastLocalWriteRef.current;
+      if (
+        lastLocalWrite &&
+        normalizeFileIdentity(lastLocalWrite.path) === normalizeFileIdentity(path) &&
+        Date.now() - lastLocalWrite.at < 1200
+      ) {
+        return;
+      }
+
+      try {
+        const payload = await invoke<FilePayload>('read_text_file', { path });
+        if (normalizeFileIdentity(documentStateRef.current.filePath) !== normalizeFileIdentity(payload.path)) return;
+
+        replaceDocument((prev) => ({
+          ...prev,
+          filePath: payload.path,
+          fileName: fileNameFromPath(payload.path),
+          content: payload.content,
+          savedContent: payload.content,
+          isDirty: false
+        }));
+        showFileSyncNotice(`Synced from disk: ${fileNameFromPath(payload.path)}`);
+        setStatusMessage(`Reloaded ${fileNameFromPath(payload.path)} after external change`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to sync external changes';
+        showFileSyncNotice(`File changed on disk, but sync failed: ${message}`);
+        setStatusMessage(message);
+      }
+    };
+
+    void listen<FileChangedPayload>('mmd://file-changed', (event) => {
+      const path = event.payload.path;
+      if (externalReloadTimerRef.current !== null) {
+        window.clearTimeout(externalReloadTimerRef.current);
+      }
+      externalReloadTimerRef.current = window.setTimeout(() => {
+        externalReloadTimerRef.current = null;
+        void handleExternalFileChange(path);
+      }, 180);
+    }).then((fn) => {
+      unlisten = fn;
+    });
+
+    return () => {
+      if (externalReloadTimerRef.current !== null) {
+        window.clearTimeout(externalReloadTimerRef.current);
+        externalReloadTimerRef.current = null;
+      }
+      unlisten?.();
+    };
+  }, []);
+
+  useEffect(() => {
     let unlisten: (() => void) | undefined;
 
     void appWindow.onDragDropEvent((event) => {
@@ -260,6 +454,26 @@ export default function App() {
     return `${documentState.editorRatio}fr 10px ${1 - documentState.editorRatio}fr`;
   }, [documentState.editorRatio, documentState.viewMode]);
 
+  function applyTextareaEdit(
+    textarea: HTMLTextAreaElement,
+    replacementText: string,
+    replaceStart: number,
+    replaceEnd: number,
+    selectionStart: number,
+    selectionEnd: number
+  ) {
+    textarea.focus();
+    textarea.setSelectionRange(replaceStart, replaceEnd);
+
+    const insertedByCommand = document.execCommand('insertText', false, replacementText);
+    if (!insertedByCommand) {
+      textarea.setRangeText(replacementText, replaceStart, replaceEnd, 'end');
+    }
+
+    textarea.setSelectionRange(selectionStart, selectionEnd);
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
   function updateContent(nextContent: string) {
     setDocumentState((prev) => ({
       ...prev,
@@ -268,29 +482,51 @@ export default function App() {
     }));
   }
 
+  function replaceDocument(nextState: DocumentState | ((prev: DocumentState) => DocumentState)) {
+    setDocumentState(nextState);
+    setEditorContentVersion((prev) => prev + 1);
+  }
+
+  function showFileSyncNotice(message: string) {
+    if (fileSyncNoticeTimerRef.current !== null) {
+      window.clearTimeout(fileSyncNoticeTimerRef.current);
+    }
+
+    setFileSyncNotice(message);
+    fileSyncNoticeTimerRef.current = window.setTimeout(() => {
+      setFileSyncNotice((current) => (current === message ? null : current));
+      fileSyncNoticeTimerRef.current = null;
+    }, 1000);
+  }
+
   function applySelectionResult(result: SelectionResult) {
     const textarea = textareaRef.current;
-    updateContent(result.value);
-    requestAnimationFrame(() => {
-      if (!textarea) return;
-      textarea.focus();
-      textarea.setSelectionRange(result.selectionStart, result.selectionEnd);
-    });
+    if (!textarea) {
+      updateContent(result.value);
+      return;
+    }
+
+    applyTextareaEdit(
+      textarea,
+      result.replacementText,
+      result.replaceStart,
+      result.replaceEnd,
+      result.selectionStart,
+      result.selectionEnd
+    );
   }
 
   function insertAtSelection(text: string) {
     const textarea = textareaRef.current;
-    if (!textarea) return;
+    if (!textarea) {
+      const nextValue = `${documentState.content}${text}`;
+      updateContent(nextValue);
+      return;
+    }
 
     const { selectionStart, selectionEnd } = textarea;
-    const nextValue = `${documentState.content.slice(0, selectionStart)}${text}${documentState.content.slice(selectionEnd)}`;
-    updateContent(nextValue);
-
     const nextCursor = selectionStart + text.length;
-    requestAnimationFrame(() => {
-      textarea.focus();
-      textarea.setSelectionRange(nextCursor, nextCursor);
-    });
+    applyTextareaEdit(textarea, text, selectionStart, selectionEnd, nextCursor, nextCursor);
   }
 
   function insertImageAtSelection(relativePath: string, fileName: string) {
@@ -349,7 +585,8 @@ export default function App() {
   async function runPendingAction(action: Exclude<PendingAction, null>) {
     if (action === 'new') {
       const next = createInitialDocument();
-      setDocumentState(next);
+      replaceDocument(next);
+      setFileSyncNotice(null);
       setStatusMessage('New document');
       return;
     }
@@ -406,7 +643,7 @@ export default function App() {
 
   async function readTextFile(path: string) {
     const payload = await invoke<FilePayload>('read_text_file', { path });
-    setDocumentState((prev) => ({
+    replaceDocument((prev) => ({
       ...prev,
       filePath: payload.path,
       fileName: fileNameFromPath(payload.path),
@@ -414,11 +651,13 @@ export default function App() {
       savedContent: payload.content,
       isDirty: false
     }));
+    setFileSyncNotice(null);
     setStatusMessage(`Opened ${fileNameFromPath(payload.path)}`);
   }
 
   async function writeTextFile(path: string) {
     await invoke('write_text_file', { path, content: documentState.content });
+    lastLocalWriteRef.current = { path, at: Date.now() };
     setDocumentState((prev) => ({
       ...prev,
       filePath: path,
@@ -426,6 +665,7 @@ export default function App() {
       savedContent: prev.content,
       isDirty: false
     }));
+    setFileSyncNotice(null);
     setStatusMessage(`Saved ${fileNameFromPath(path)}`);
   }
 
@@ -632,6 +872,7 @@ export default function App() {
           {documentState.viewMode !== 'preview' ? (
             <EditorPane
               content={documentState.content}
+              contentVersion={editorContentVersion}
               fileName={documentState.fileName}
               textareaRef={textareaRef}
               onChange={updateContent}
@@ -663,11 +904,15 @@ export default function App() {
         </div>
       </main>
 
-      <footer className="flex items-center justify-between border-t border-[var(--app-border)] bg-[var(--app-footer-bg)] px-4 py-2 text-xs text-[var(--app-muted)]">
-        <div className="flex items-center gap-3">
-          <span>{documentState.isDirty ? 'Unsaved' : 'Saved'}</span>
-          <span>{documentState.content.length} chars</span>
-          <span>{documentState.content.split('\n').length} lines</span>
+      <footer className="border-t border-[var(--app-border)] bg-[var(--app-footer-bg)] px-4 py-2 text-xs text-[var(--app-muted)]">
+        <div className="flex items-center justify-between gap-3 overflow-hidden">
+          <div className="flex min-w-0 items-center gap-3 overflow-hidden">
+            <span>{documentState.isDirty ? 'Unsaved' : 'Saved'}</span>
+            <span>{documentState.content.length} chars</span>
+            <span>{documentState.content.split('\n').length} lines</span>
+            {fileSyncNotice ? <span className="truncate text-[var(--app-muted-soft)]">{fileSyncNotice}</span> : null}
+          </div>
+          <span className="truncate text-right">{statusMessage}</span>
         </div>
       </footer>
 

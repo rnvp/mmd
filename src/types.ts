@@ -16,6 +16,10 @@ export type FilePayload = {
   content: string;
 };
 
+export type FileChangedPayload = {
+  path: string;
+};
+
 export type InsertableImage = {
   absolutePath: string;
   relativePath: string;

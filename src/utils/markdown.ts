@@ -2,6 +2,9 @@ import type { TitleAction } from '../types';
 
 export type SelectionResult = {
   value: string;
+  replaceStart: number;
+  replaceEnd: number;
+  replacementText: string;
   selectionStart: number;
   selectionEnd: number;
 };
@@ -26,6 +29,9 @@ function mapSelectedLines(
   const nextValue = `${value.slice(0, lineStart)}${mapped}${value.slice(lineEnd)}`;
   return {
     value: nextValue,
+    replaceStart: lineStart,
+    replaceEnd: lineEnd,
+    replacementText: mapped,
     selectionStart: lineStart,
     selectionEnd: lineStart + mapped.length
   };
@@ -43,6 +49,9 @@ function wrapSelection(
   const replaced = `${prefix}${selected}${suffix}`;
   return {
     value: `${value.slice(0, start)}${replaced}${value.slice(end)}`,
+    replaceStart: start,
+    replaceEnd: end,
+    replacementText: replaced,
     selectionStart: start + prefix.length,
     selectionEnd: start + prefix.length + selected.length
   };
@@ -57,6 +66,9 @@ function insertBlock(
 ): SelectionResult {
   return {
     value: `${value.slice(0, start)}${block}${value.slice(end)}`,
+    replaceStart: start,
+    replaceEnd: end,
+    replacementText: block,
     selectionStart: start + cursorOffset,
     selectionEnd: start + cursorOffset
   };
@@ -90,7 +102,14 @@ export function applyMarkdownAction(
     case 'image':
       return insertBlock(value, start, end, '![alt text](./image.png)', 2);
     default:
-      return { value, selectionStart: start, selectionEnd: end };
+      return {
+        value,
+        replaceStart: start,
+        replaceEnd: end,
+        replacementText: value.slice(start, end),
+        selectionStart: start,
+        selectionEnd: end
+      };
   }
 }
 
@@ -99,6 +118,9 @@ export function indentSelection(value: string, start: number, end: number): Sele
   if (!hasRange) {
     return {
       value: `${value.slice(0, start)}  ${value.slice(end)}`,
+      replaceStart: start,
+      replaceEnd: end,
+      replacementText: '  ',
       selectionStart: start + 2,
       selectionEnd: start + 2
     };
@@ -114,6 +136,9 @@ export function outdentSelection(value: string, start: number, end: number): Sel
     const removeCount = before === '  ' ? 2 : before.endsWith('\t') ? 1 : 0;
     return {
       value: `${value.slice(0, start - removeCount)}${value.slice(end)}`,
+      replaceStart: start - removeCount,
+      replaceEnd: end,
+      replacementText: '',
       selectionStart: start - removeCount,
       selectionEnd: start - removeCount
     };

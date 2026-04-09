@@ -1,7 +1,9 @@
 import type { ClipboardEvent as ReactClipboardEvent, KeyboardEvent as ReactKeyboardEvent, RefObject } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 
 type EditorPaneProps = {
   content: string;
+  contentVersion: number;
   fileName: string;
   onChange: (value: string) => void;
   onKeyDown: (event: ReactKeyboardEvent<HTMLTextAreaElement>) => void;
@@ -10,12 +12,23 @@ type EditorPaneProps = {
   textareaRef: RefObject<HTMLTextAreaElement | null>;
 };
 
-export function EditorPane({ content, fileName, onChange, onKeyDown, onPaste, onScroll, textareaRef }: EditorPaneProps) {
+export function EditorPane({ content, contentVersion, fileName, onChange, onKeyDown, onPaste, onScroll, textareaRef }: EditorPaneProps) {
+  const lastAppliedVersionRef = useRef<number>(-1);
+
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    if (lastAppliedVersionRef.current === contentVersion) return;
+
+    textarea.value = content;
+    lastAppliedVersionRef.current = contentVersion;
+  }, [content, contentVersion, textareaRef]);
+
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col border border-[var(--app-border)] border-r-0 bg-[var(--app-editor-bg)]">
       <textarea
         ref={textareaRef}
-        value={content}
+        defaultValue={content}
         spellCheck={false}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}
