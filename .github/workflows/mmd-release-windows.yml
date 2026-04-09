@@ -1,0 +1,47 @@
+name: mmd-release-windows
+
+on:
+  push:
+    tags:
+      - "mmd-v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: mmd/package-lock.json
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend dependencies
+        working-directory: mmd
+        run: npm ci
+
+      - name: Build and publish Windows release
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: mmd
+          tagName: mmd-v__VERSION__
+          releaseName: "MMD v__VERSION__"
+          releaseBody: "Windows build for MMD. Download the attached installer from the assets below."
+          releaseDraft: false
+          prerelease: false
+          uploadWorkflowArtifacts: true
+          updaterJsonPreferNsis: true
+          args: --bundles nsis
