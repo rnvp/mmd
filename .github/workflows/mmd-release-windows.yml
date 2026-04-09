@@ -26,7 +26,6 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install frontend dependencies
-        working-directory: mmd
         run: npm ci
 
       - name: Build and publish Windows release
@@ -34,7 +33,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          projectPath: mmd
           tagName: mmd-v__VERSION__
           releaseName: "MMD v__VERSION__"
           releaseBody: "Windows build for MMD. Download the attached installer from the assets below."
