@@ -899,6 +899,7 @@ export default function App() {
               filePath={documentState.filePath}
               previewRef={previewRef}
               onScroll={() => syncScroll('preview')}
+              themeMode={themeMode}
             />
           ) : null}
         </div>

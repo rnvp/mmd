@@ -6,16 +6,29 @@ import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
+import type { ThemeMode } from '../types';
+import { MermaidDiagram } from './MermaidDiagram';
 
 type PreviewPaneProps = {
   content: string;
   filePath: string | null;
   previewRef: RefObject<HTMLDivElement | null>;
   onScroll: () => void;
+  themeMode: ThemeMode;
 };
 
 type MarkdownImageProps = ComponentProps<'img'> & {
   documentPath: string | null;
+};
+
+type MarkdownAstNode = {
+  type?: string;
+  value?: string;
+  children?: MarkdownAstNode[];
+  tagName?: string;
+  properties?: {
+    className?: string | string[];
+  };
 };
 
 function isExternalSource(source: string) {
@@ -98,7 +111,23 @@ function MarkdownImage({ src, alt = '', documentPath, ...props }: MarkdownImageP
   return <img {...props} src={resolvedSrc} alt={alt} />;
 }
 
-export function PreviewPane({ content, filePath, previewRef, onScroll }: PreviewPaneProps) {
+function readNodeText(node: MarkdownAstNode): string {
+  if (node.type === 'text') return node.value ?? '';
+  return node.children?.map(readNodeText).join('') ?? '';
+}
+
+function getMermaidSource(node: MarkdownAstNode | undefined) {
+  const codeNode = node?.children?.find((child) => child.type === 'element' && child.tagName === 'code');
+  if (!codeNode) return null;
+
+  const className = codeNode.properties?.className;
+  const classes = Array.isArray(className) ? className : className ? [className] : [];
+  if (!classes.includes('language-mermaid')) return null;
+
+  return readNodeText(codeNode).replace(/\n$/, '');
+}
+
+export function PreviewPane({ content, filePath, previewRef, onScroll, themeMode }: PreviewPaneProps) {
   return (
     <section className="markdown-shell flex h-full min-h-0 min-w-0 flex-col border border-[var(--app-border)] border-l-0 bg-[var(--app-preview-bg)]">
       <div ref={previewRef} onScroll={onScroll} className="min-h-0 min-w-0 flex-1 overflow-auto px-5 py-5">
@@ -107,7 +136,15 @@ export function PreviewPane({ content, filePath, previewRef, onScroll }: Preview
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeHighlight]}
             components={{
-              img: ({ node: _node, ...imgProps }) => <MarkdownImage {...imgProps} documentPath={filePath} />
+              img: ({ node: _node, ...imgProps }) => <MarkdownImage {...imgProps} documentPath={filePath} />,
+              pre: ({ node, children, ...preProps }) => {
+                const source = getMermaidSource(node as MarkdownAstNode | undefined);
+                return source === null ? (
+                  <pre {...preProps}>{children}</pre>
+                ) : (
+                  <MermaidDiagram source={source} themeMode={themeMode} />
+                );
+              }
             }}
           >
             {content || '_Nothing to preview yet._'}

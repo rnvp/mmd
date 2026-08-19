@@ -235,6 +235,39 @@ textarea {
   color: var(--app-code-hl-text);
 }
 
+.markdown-body .mermaid-diagram,
+.markdown-body .mermaid-loading,
+.markdown-body .mermaid-error {
+  margin: 0 0 1rem;
+  max-width: 100%;
+  overflow: auto;
+  border: 1px solid var(--app-code-block-border);
+  border-radius: 1rem;
+  background: var(--app-code-block-bg);
+  padding: 1rem;
+}
+
+.markdown-body .mermaid-diagram svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.markdown-body .mermaid-loading {
+  color: var(--app-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.markdown-body .mermaid-error {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--app-code-hl-red);
+  font-size: 0.85rem;
+}
+
 .markdown-body .hljs-comment,
 .markdown-body .hljs-quote {
   color: var(--app-code-hl-comment);
