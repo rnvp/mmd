@@ -1,7 +1,8 @@
-import type { ComponentProps, RefObject } from 'react';
+import type { ComponentProps, MouseEvent as ReactMouseEvent, RefObject } from 'react';
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { dirname, isAbsolute, join, normalize } from '@tauri-apps/api/path';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
@@ -111,6 +112,30 @@ function MarkdownImage({ src, alt = '', documentPath, ...props }: MarkdownImageP
   return <img {...props} src={resolvedSrc} alt={alt} />;
 }
 
+function MarkdownLink({ href, children, onClick, ...props }: ComponentProps<'a'>) {
+  function handleClick(event: ReactMouseEvent<HTMLAnchorElement>) {
+    onClick?.(event);
+    if (event.defaultPrevented || !href || href.startsWith('#')) return;
+
+    event.preventDefault();
+
+    try {
+      const url = new URL(href);
+      if (url.protocol === 'http:' || url.protocol === 'https:') {
+        void openUrl(url.href).catch(() => undefined);
+      }
+    } catch {
+      // Relative and unsupported links must not navigate the editor WebView.
+    }
+  }
+
+  return (
+    <a {...props} href={href} onClick={handleClick}>
+      {children}
+    </a>
+  );
+}
+
 function readNodeText(node: MarkdownAstNode): string {
   if (node.type === 'text') return node.value ?? '';
   return node.children?.map(readNodeText).join('') ?? '';
@@ -136,6 +161,7 @@ export function PreviewPane({ content, filePath, previewRef, onScroll, themeMode
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeHighlight]}
             components={{
+              a: ({ node: _node, ...linkProps }) => <MarkdownLink {...linkProps} />,
               img: ({ node: _node, ...imgProps }) => <MarkdownImage {...imgProps} documentPath={filePath} />,
               pre: ({ node, children, ...preProps }) => {
                 const source = getMermaidSource(node as MarkdownAstNode | undefined);

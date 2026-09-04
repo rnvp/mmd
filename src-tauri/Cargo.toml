@@ -1,6 +1,6 @@
 [package]
 name = "mmd"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 
 [build-dependencies]
@@ -10,8 +10,9 @@ tauri-build = { version = "2", features = [] }
 base64 = "0.22"
 notify = "8"
 serde = { version = "1", features = ["derive"] }
-tauri = { version = "2", features = [] }
+tauri = { version = "2.11", features = [] }
 tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
 
 [features]
 default = ["custom-protocol"]
